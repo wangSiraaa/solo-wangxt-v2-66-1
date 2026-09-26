@@ -58,6 +58,9 @@ export function buildSample(now: number): {
     }
     relations.push({
       id: `R${i + 1}`,
+      // 示例总是载入默认方案；schemeId 由 loadSample 统一打上
+      schemeId: '',
+      originId: null,
       from,
       to,
       kind,
@@ -77,6 +80,7 @@ export function buildSample(now: number): {
   const retractions: Retraction[] = [
     {
       id: 'X1',
+      schemeId: '',
       relationId: retracted.id,
       snapshot,
       reason: '剖面复核后 1015 与 1003 的叠压关系不明，撤回该推断。',

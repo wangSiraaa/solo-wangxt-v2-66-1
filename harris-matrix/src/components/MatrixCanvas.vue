@@ -30,6 +30,16 @@ const style: cytoscape.StylesheetJson = [
   { selector: 'node.isolated', style: { 'border-color': '#ab47bc', 'border-width': 3, 'border-style': 'dashed' } },
   { selector: 'node.selected', style: { 'border-color': '#1e88e5', 'border-width': 4 } },
   {
+    selector: 'node.located',
+    style: {
+      'border-color': '#fbc02d',
+      'border-width': 6,
+      'background-blacken': -0.25,
+      width: 48,
+      height: 48,
+    },
+  },
+  {
     selector: 'edge',
     style: {
       width: 2,
@@ -131,6 +141,20 @@ watch(
   () => [state.units, state.relations, state.viewMode, state.layoutVersion, state.selectedUnitId],
   rebuild,
   { deep: true },
+)
+
+// 比较视图点击差异项：居中并短暂高亮相关层位（不改动任何方案数据）
+watch(
+  () => state.locateTarget?.nonce,
+  (nonce) => {
+    if (!cy || !nonce || !state.locateTarget) return
+    const node = cy.getElementById(state.locateTarget.unitId)
+    if (node.nonempty()) {
+      node.addClass('located')
+      cy.animate({ center: { eles: node }, zoom: Math.max(cy.zoom(), 0.9) }, { duration: 250 })
+      window.setTimeout(() => node.removeClass('located'), 1600)
+    }
+  },
 )
 
 onBeforeUnmount(() => {

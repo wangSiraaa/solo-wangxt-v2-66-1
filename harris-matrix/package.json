@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "esbuild test/acceptance.ts --bundle --platform=node --format=cjs --packages=external --outfile=.test-build/acceptance.cjs --log-level=warning && node .test-build/acceptance.cjs"
   },
   "dependencies": {
     "cytoscape": "^3.31.2",

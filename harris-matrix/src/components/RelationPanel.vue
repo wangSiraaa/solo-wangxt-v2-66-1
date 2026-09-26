@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
-import { activeRelations, addRelation, evidenceRef, redundantIds, retractRelation, state, unitLabel } from '../store'
+import {
+  activeRelations,
+  addRelation,
+  currentScheme,
+  evidenceRef,
+  redundantIds,
+  retractRelation,
+  state,
+  unitLabel,
+} from '../store'
 import type { Relation, RelationKind, RelationSource } from '../types'
 
 const form = reactive({
@@ -44,7 +53,7 @@ function fmtTime(t: number): string {
 
 <template>
   <section class="panel">
-    <h3>新增关系</h3>
+    <h3>新增关系<span class="scope-tag">仅写入「{{ currentScheme?.name }}」</span></h3>
     <form class="form" @submit.prevent="submit">
       <div class="row">
         <select v-model="form.from" required>
@@ -76,7 +85,10 @@ function fmtTime(t: number): string {
   </section>
 
   <section class="panel">
-    <h3>活跃关系（{{ sortedActive.length }}）</h3>
+    <h3>
+      活跃关系（{{ sortedActive.length }}）
+      <span class="scope-tag">「{{ currentScheme?.name }}」内</span>
+    </h3>
     <ul class="list">
       <li v-for="r in sortedActive" :key="r.id" :class="{ faded: isHidden(r) }">
         <span class="grow">
@@ -99,7 +111,10 @@ function fmtTime(t: number): string {
   </section>
 
   <section class="panel">
-    <h3>已撤销判断（{{ state.retractions.length }}）</h3>
+    <h3>
+      已撤销判断（{{ state.retractions.length }}）
+      <span class="scope-tag">「{{ currentScheme?.name }}」内</span>
+    </h3>
     <ul class="list">
       <li v-for="x in state.retractions" :key="x.id" class="retracted">
         <span class="grow">
@@ -120,6 +135,16 @@ function fmtTime(t: number): string {
 }
 .retracted {
   background: #faf3f3;
+}
+.scope-tag {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: normal;
+  color: #1565c0;
+  background: #e3f2fd;
+  border-radius: 4px;
+  padding: 1px 6px;
+  vertical-align: middle;
 }
 .ev-pick {
   display: flex;

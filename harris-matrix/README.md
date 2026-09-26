@@ -9,7 +9,30 @@ Cytoscape.js 绘制矩阵，Dexie(IndexedDB) 本地持久化。**不发生任何
 npm install
 npm run dev      # 开发
 npm run build    # 产出静态文件到 dist/，可离线部署
+npm test         # 验收测试（Node + fake-indexeddb，覆盖分支/闭包对比/迁移等）
 ```
+
+## 解释方案分支
+
+- 侧边栏「解释方案」可**从当前关系集派生命名方案**：派生时完整深拷贝关系（含撤回记录），
+  新旧记录以新 id 解耦，并用 `originId` 保留血缘；`Scheme.derivedFrom` 仅作历史引用。
+- 各方案中的观察 / 推断 / 同期关系与撤回判断**独立增删，互不串扰**；
+  层位、证据、画布坐标全方案共享。
+- **删除来源方案不会破坏派生方案**：派生方案持有独立副本；`derivedFrom` 悬空时显示“来源方案已删除”。
+- **方案语义对比（只读）**：`src/diff.ts` 按血缘（originId）+ 语义对双层对齐记录，输出
+  ① 直接先后边差异 ② **传递闭包新增/失效的先后结论**（标注直接/间接推出）
+  ③ 同期关联差异 ④ 同记录撤回状态/矛盾标记差异。点击差异项只在画布定位层位，**绝不改写方案**。
+  特别地：记录完全相同、仅一条判断被撤回时，会提示“直接记录一致但闭包结论变化”。
+- 成环冲突**只属于其所在方案**：矛盾边是该方案自己的记录，其他方案无此边即无冲突。
+- 方案、当前选择、比较选择持久化在 IndexedDB（`schemes` 表与 `appmeta` 表），刷新后恢复。
+
+## 数据迁移
+
+- **旧版单方案库自动升级**：Dexie v1→v2 `upgrade` 中创建默认方案，把旧
+  relations / retractions / batches 无损打上默认方案 `schemeId`。
+- **旧版 v1 工程文件导入**：识别 `version: 1` 导出后自动生成默认方案，保留全部原关系与撤回记录，
+  并仍按携带的偏序闭包做一致性校验。
+- v2 导出携带全部方案；批次按 `schemeId` 隔离（层位/证据等跨方案变更为全局批次）。
 
 ## 数据模型要点
 
@@ -32,8 +55,12 @@ npm run build    # 产出静态文件到 dist/，可离线部署
 
 ```
 src/graph.ts   Graphology 封装：成环路径、传递约简、偏序闭包、分层排布
-src/store.ts   状态与业务：批次撤销、导入导出、偏序校验
-src/db.ts      Dexie/IndexedDB 六张表
+src/diff.ts    方案语义对比：记录对齐、直接边差异、闭包结论新增/失效（纯函数只读）
+src/store.ts   状态与业务：方案分支/切换/删除、批次撤销、导入导出与迁移、偏序校验
+src/db.ts      Dexie/IndexedDB（v2 八表，含 v1→v2 无损升级）
 src/sample.ts  示例工程
+src/components/SchemePanel.vue   方案派生/切换/删除/比较入口
+src/components/CompareModal.vue  只读语义对比视图（点击差异定位层位）
 src/components/MatrixCanvas.vue  Cytoscape 画布
+test/          验收测试（npm test）
 ```

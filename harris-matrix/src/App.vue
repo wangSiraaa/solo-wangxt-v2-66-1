@@ -4,11 +4,14 @@ import MatrixCanvas from './components/MatrixCanvas.vue'
 import UnitPanel from './components/UnitPanel.vue'
 import RelationPanel from './components/RelationPanel.vue'
 import BatchPanel from './components/BatchPanel.vue'
+import SchemePanel from './components/SchemePanel.vue'
+import CompareModal from './components/CompareModal.vue'
 import {
   autoLayout,
   cancelCycle,
   clearAll,
   confirmCycle,
+  currentScheme,
   exportProject,
   importProject,
   lastBatch,
@@ -39,6 +42,9 @@ function onImportFile(e: Event) {
   <div class="app">
     <header class="toolbar">
       <h1>地层矩阵编辑台</h1>
+      <span class="scheme-badge" title="当前编辑的解释方案">
+        方案：<b>{{ currentScheme?.name ?? '—' }}</b>
+      </span>
       <div class="view-toggle" role="tablist">
         <button :class="{ on: state.viewMode === 'raw' }" @click="state.viewMode = 'raw'">原始关系</button>
         <button :class="{ on: state.viewMode === 'simplified' }" @click="state.viewMode = 'simplified'">
@@ -62,6 +68,7 @@ function onImportFile(e: Event) {
 
     <main class="main">
       <aside class="sidebar">
+        <SchemePanel />
         <UnitPanel />
         <RelationPanel />
         <BatchPanel />
@@ -70,22 +77,24 @@ function onImportFile(e: Event) {
     </main>
 
     <footer class="statusbar">
-      数据仅保存于本机浏览器 IndexedDB，不上传任何现场资料。地层身份与画布位置分离存储；撤销以批次为单位，关系与证据引用一并恢复。
+      数据仅保存于本机浏览器 IndexedDB，不上传任何现场资料。解释方案按关系集分支、独立增删；地层身份与画布位置分离存储；撤销以批次为单位，关系与证据引用一并恢复。
     </footer>
 
     <!-- 成环确认对话框：给出完整环路径 -->
     <div v-if="state.pendingCycle" class="modal-mask" @click.self="cancelCycle">
       <div class="modal">
         <h3>该关系将构成环</h3>
-        <p>新增此先后关系后，将形成如下循环：</p>
+        <p>在当前方案「{{ currentScheme?.name }}」中新增此先后关系后，将形成如下循环：</p>
         <p class="cycle-path">{{ cyclePathText }}</p>
-        <p>这通常意味着两条记录互相矛盾。可以保留为矛盾记录（标红显示，不删除任何原始观察），或取消本次添加。</p>
+        <p>这通常意味着两条记录互相矛盾。可以保留为矛盾记录（标红显示，不删除任何原始观察，冲突仅属于本方案），或取消本次添加。</p>
         <div class="modal-actions">
           <button class="danger" @click="confirmCycle">保留为矛盾记录</button>
           <button @click="cancelCycle">取消</button>
         </div>
       </div>
     </div>
+
+    <CompareModal />
 
     <div v-if="state.toast" class="toast">{{ state.toast }}</div>
   </div>
