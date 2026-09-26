@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
-import { activeRelations, addRelation, evidenceRef, redundantIds, retractRelation, state, unitLabel } from '../store'
+import {
+  activeRelations,
+  addRelation,
+  currentScheme,
+  evidenceRef,
+  redundantIds,
+  retractRelation,
+  schemeRetractions,
+  state,
+  unitLabel,
+} from '../store'
 import type { Relation, RelationKind, RelationSource } from '../types'
 
 const form = reactive({
@@ -44,7 +54,7 @@ function fmtTime(t: number): string {
 
 <template>
   <section class="panel">
-    <h3>新增关系</h3>
+    <h3>新增关系<span v-if="currentScheme" class="muted small">　→ 当前方案：{{ currentScheme.name }}</span></h3>
     <form class="form" @submit.prevent="submit">
       <div class="row">
         <select v-model="form.from" required>
@@ -99,9 +109,9 @@ function fmtTime(t: number): string {
   </section>
 
   <section class="panel">
-    <h3>已撤销判断（{{ state.retractions.length }}）</h3>
+    <h3>已撤销判断（{{ schemeRetractions.length }}）</h3>
     <ul class="list">
-      <li v-for="x in state.retractions" :key="x.id" class="retracted">
+      <li v-for="x in schemeRetractions" :key="x.id" class="retracted">
         <span class="grow">
           <s>{{ describe(x.snapshot) }}</s>
           <span class="tag" :class="x.snapshot.source">{{ sourceNames[x.snapshot.source] }}</span>
@@ -109,7 +119,7 @@ function fmtTime(t: number): string {
           <small class="muted">{{ fmtTime(x.at) }}　理由：{{ x.reason }}</small>
         </span>
       </li>
-      <li v-if="state.retractions.length === 0" class="muted">暂无</li>
+      <li v-if="schemeRetractions.length === 0" class="muted">暂无</li>
     </ul>
   </section>
 </template>

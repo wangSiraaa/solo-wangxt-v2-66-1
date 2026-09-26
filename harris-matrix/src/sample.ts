@@ -1,6 +1,10 @@
 import type { Evidence, Relation, Retraction, StratUnit } from './types'
 import { cyclePathIfAdded, type OrderEdge } from './graph'
 
+/** 示例数据不绑定方案：载入时由 store 归入新建的默认方案 */
+type SchemelessRelation = Omit<Relation, 'schemeId'>
+type SchemelessRetraction = Omit<Retraction, 'schemeId' | 'snapshot'> & { snapshot: SchemelessRelation }
+
 /**
  * 示例工程：一处含基槽切割、灰坑切割的堆积序列。
  * 故意包含：切割事件、孤立层位（1018）、互相矛盾的观察记录、一条已撤销的推断。
@@ -8,8 +12,8 @@ import { cyclePathIfAdded, type OrderEdge } from './graph'
 export function buildSample(now: number): {
   units: StratUnit[]
   evidences: Evidence[]
-  relations: Relation[]
-  retractions: Retraction[]
+  relations: SchemelessRelation[]
+  retractions: SchemelessRetraction[]
 } {
   const units: StratUnit[] = [
     { id: '1001', label: '1001', type: 'deposit', note: '现代表土层', createdAt: now },
@@ -48,7 +52,7 @@ export function buildSample(now: number): {
     ['1015', '1003', 'earlier', 'inference', [], '推断：踩踏面被淤积层覆盖'],
   ]
 
-  const relations: Relation[] = []
+  const relations: SchemelessRelation[] = []
   const edges: OrderEdge[] = []
   raw.forEach(([from, to, kind, source, evidenceIds, note], i) => {
     let conflict = false
@@ -72,9 +76,9 @@ export function buildSample(now: number): {
 
   // 撤销最后一条推断，并留下独立的撤销记录
   const retracted = relations[relations.length - 1]
-  const snapshot: Relation = { ...retracted }
+  const snapshot: SchemelessRelation = { ...retracted }
   retracted.status = 'retracted'
-  const retractions: Retraction[] = [
+  const retractions: SchemelessRetraction[] = [
     {
       id: 'X1',
       relationId: retracted.id,

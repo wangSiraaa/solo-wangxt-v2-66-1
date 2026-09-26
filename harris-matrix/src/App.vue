@@ -4,17 +4,23 @@ import MatrixCanvas from './components/MatrixCanvas.vue'
 import UnitPanel from './components/UnitPanel.vue'
 import RelationPanel from './components/RelationPanel.vue'
 import BatchPanel from './components/BatchPanel.vue'
+import ComparePanel from './components/ComparePanel.vue'
 import {
   autoLayout,
   cancelCycle,
   clearAll,
   confirmCycle,
+  currentScheme,
+  deleteScheme,
+  deriveScheme,
   exportProject,
   importProject,
   lastBatch,
   loadSample,
   redundantIds,
   refresh,
+  renameScheme,
+  setCurrentScheme,
   state,
   undo,
   unitLabel,
@@ -24,6 +30,15 @@ const fileInput = ref<HTMLInputElement>()
 
 const cyclePathText = computed(() => state.pendingCycle?.path.map(unitLabel).join(' → ') ?? '')
 
+/** 当前方案的来源说明：来源被删除时仍显示名称快照 */
+const sourceText = computed(() => {
+  const s = currentScheme.value
+  if (!s) return ''
+  if (!s.sourceSchemeId) return '初始方案'
+  const src = state.schemes.find((x) => x.id === s.sourceSchemeId)
+  return src ? `派生自「${src.name}」` : `派生自「${s.sourceSchemeName ?? '未知'}」（已删除）`
+})
+
 onMounted(() => {
   void refresh()
 })
@@ -32,6 +47,30 @@ function onImportFile(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) void importProject(file)
   if (fileInput.value) fileInput.value.value = ''
+}
+
+function onSwitchScheme(e: Event) {
+  void setCurrentScheme((e.target as HTMLSelectElement).value)
+}
+
+function onDeriveScheme() {
+  const name = window.prompt(
+    '新方案名称（将复制当前方案的全部关系，之后两个方案的增删互不影响）：',
+    currentScheme.value ? `${currentScheme.value.name}·分支` : '',
+  )
+  if (name !== null) void deriveScheme(name)
+}
+
+function onRenameScheme() {
+  const s = currentScheme.value
+  if (!s) return
+  const name = window.prompt('方案重命名：', s.name)
+  if (name !== null) void renameScheme(s.id, name)
+}
+
+function onDeleteScheme() {
+  const s = currentScheme.value
+  if (s) void deleteScheme(s.id)
 }
 </script>
 
@@ -60,8 +99,29 @@ function onImportFile(e: Event) {
       <button class="danger" @click="clearAll()">清空</button>
     </header>
 
+    <div class="scheme-toolbar">
+      <span class="scheme-title">解释方案</span>
+      <select :value="state.currentSchemeId ?? ''" :disabled="state.schemes.length === 0" @change="onSwitchScheme">
+        <option v-for="s in state.schemes" :key="s.id" :value="s.id">{{ s.name }}</option>
+      </select>
+      <button :disabled="!currentScheme" @click="onDeriveScheme">从当前派生…</button>
+      <button :disabled="!currentScheme" @click="onRenameScheme">重命名</button>
+      <button class="danger" :disabled="state.schemes.length <= 1" @click="onDeleteScheme">删除方案</button>
+      <button
+        :class="{ on: state.compareOpen }"
+        :disabled="state.schemes.length < 2"
+        title="对比两个方案的直接边与传递闭包差异（只读）"
+        @click="state.compareOpen = !state.compareOpen"
+      >
+        语义对比
+      </button>
+      <span v-if="currentScheme" class="muted small">来源：{{ sourceText }}</span>
+      <span v-else class="muted small">暂无方案，添加关系时将自动创建默认方案</span>
+    </div>
+
     <main class="main">
       <aside class="sidebar">
+        <ComparePanel v-if="state.compareOpen" />
         <UnitPanel />
         <RelationPanel />
         <BatchPanel />
@@ -70,7 +130,7 @@ function onImportFile(e: Event) {
     </main>
 
     <footer class="statusbar">
-      数据仅保存于本机浏览器 IndexedDB，不上传任何现场资料。地层身份与画布位置分离存储；撤销以批次为单位，关系与证据引用一并恢复。
+      数据仅保存于本机浏览器 IndexedDB，不上传任何现场资料。解释方案按关系集分支，可独立编辑与语义对比；层位、证据与画布位置为各方案共享；撤销以批次为单位。
     </footer>
 
     <!-- 成环确认对话框：给出完整环路径 -->

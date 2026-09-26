@@ -29,6 +29,7 @@ const style: cytoscape.StylesheetJson = [
   { selector: 'node[type="interface"]', style: { 'background-color': '#607d8b', shape: 'ellipse' } },
   { selector: 'node.isolated', style: { 'border-color': '#ab47bc', 'border-width': 3, 'border-style': 'dashed' } },
   { selector: 'node.selected', style: { 'border-color': '#1e88e5', 'border-width': 4 } },
+  { selector: 'node.compare', style: { 'border-color': '#ef6c00', 'border-width': 5 } },
   {
     selector: 'edge',
     style: {
@@ -80,7 +81,11 @@ function rebuild() {
 
   const nodes = state.units.map((u) => ({
     data: { id: u.id, label: u.label, type: u.type },
-    classes: [connected.has(u.id) ? '' : 'isolated', state.selectedUnitId === u.id ? 'selected' : ''].join(' '),
+    classes: [
+      connected.has(u.id) ? '' : 'isolated',
+      state.selectedUnitId === u.id ? 'selected' : '',
+      state.compareHighlight.includes(u.id) ? 'compare' : '',
+    ].join(' '),
   }))
 
   const edges = activeRelations.value
@@ -128,7 +133,15 @@ onMounted(() => {
 })
 
 watch(
-  () => [state.units, state.relations, state.viewMode, state.layoutVersion, state.selectedUnitId],
+  () => [
+    state.units,
+    state.relations,
+    state.viewMode,
+    state.layoutVersion,
+    state.selectedUnitId,
+    state.currentSchemeId,
+    state.compareHighlight,
+  ],
   rebuild,
   { deep: true },
 )

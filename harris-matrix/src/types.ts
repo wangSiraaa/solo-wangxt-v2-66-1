@@ -9,6 +9,23 @@ export type RelationSource = 'observation' | 'inference'
 
 export type RelationStatus = 'active' | 'retracted'
 
+/** 迁移旧数据 / 清空重建时使用的默认方案固定 id */
+export const DEFAULT_SCHEME_ID = 'scheme-default'
+
+/**
+ * 解释方案：一组独立的关系解释（观察/推断/同期）。
+ * 层位、证据、画布位置为各方案共享的现场资料；只有关系解释按方案分支。
+ */
+export interface Scheme {
+  id: string
+  name: string
+  createdAt: number
+  /** 派生来源方案 id；来源被删除后保留作溯源（悬空引用，不置空、不级联） */
+  sourceSchemeId: string | null
+  /** 来源方案名快照：来源删除后仍可显示「派生自 X（已删除）」 */
+  sourceSchemeName: string | null
+}
+
 /** 地层身份：与画布位置完全分离 */
 export interface StratUnit {
   id: string
@@ -27,6 +44,8 @@ export interface UnitPosition {
 
 export interface Relation {
   id: string
+  /** 所属解释方案 */
+  schemeId: string
   from: string
   to: string
   kind: RelationKind
@@ -50,13 +69,21 @@ export interface Evidence {
 /** 被撤销的判断：单独成表保存快照与理由，不混入活跃关系 */
 export interface Retraction {
   id: string
+  /** 所属解释方案（与被撤回关系一致） */
+  schemeId: string
   relationId: string
   snapshot: Relation
   reason: string
   at: number
 }
 
-export type TableName = 'units' | 'positions' | 'relations' | 'evidences' | 'retractions'
+export type TableName = 'units' | 'positions' | 'relations' | 'evidences' | 'retractions' | 'schemes'
+
+/** 元信息键值（当前方案选择等），不进入撤销批次 */
+export interface MetaEntry {
+  key: string
+  value: unknown
+}
 
 /** 通用变更记录：before/after 支持正向应用与逆向撤销 */
 export interface Mutation {
@@ -84,16 +111,23 @@ export interface RelationDraft {
   note: string
 }
 
-/** 导出文件格式：携带偏序闭包用于导入校验 */
+/**
+ * 导出文件格式：携带偏序闭包用于导入校验。
+ * version 2 起携带方案表与当前选择；导入旧版（version 1，无 schemes）时自动迁移为默认方案。
+ */
 export interface ProjectExport {
   app: 'harris-matrix-workbench'
-  version: 1
+  version: number
   exportedAt: string
+  /** v2 新增：解释方案表（旧版文件没有此字段） */
+  schemes?: Scheme[]
+  /** v2 新增：导出时的当前方案 */
+  currentSchemeId?: string | null
   units: StratUnit[]
   positions: UnitPosition[]
   relations: Relation[]
   evidences: Evidence[]
   retractions: Retraction[]
-  /** 活跃“早于”关系的可达对闭包（排序后），导入时重算比对 */
+  /** 当前方案活跃“早于”关系的可达对闭包（排序后），导入时重算比对 */
   partialOrder: string[]
 }
